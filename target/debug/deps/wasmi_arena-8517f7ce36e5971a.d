@@ -1,0 +1,10 @@
+/Users/tranhoang/Desktop/ok/soroban-bootcamp/contracts/uni-cert-token/target/debug/deps/wasmi_arena-8517f7ce36e5971a.d: /Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/lib.rs /Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/component_vec.rs /Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/dedup.rs /Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/guarded.rs
+
+/Users/tranhoang/Desktop/ok/soroban-bootcamp/contracts/uni-cert-token/target/debug/deps/libwasmi_arena-8517f7ce36e5971a.rlib: /Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/lib.rs /Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/component_vec.rs /Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/dedup.rs /Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/guarded.rs
+
+/Users/tranhoang/Desktop/ok/soroban-bootcamp/contracts/uni-cert-token/target/debug/deps/libwasmi_arena-8517f7ce36e5971a.rmeta: /Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/lib.rs /Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/component_vec.rs /Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/dedup.rs /Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/guarded.rs
+
+/Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/lib.rs:
+/Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/component_vec.rs:
+/Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/dedup.rs:
+/Users/tranhoang/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasmi_arena-0.4.1/src/guarded.rs:

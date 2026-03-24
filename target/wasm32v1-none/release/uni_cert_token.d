@@ -1,0 +1,1 @@
+/Users/tranhoang/Desktop/ok/soroban-bootcamp/contracts/uni-cert-token/target/wasm32v1-none/release/uni_cert_token.wasm: /Users/tranhoang/Desktop/ok/soroban-bootcamp/contracts/uni-cert-token/src/lib.rs

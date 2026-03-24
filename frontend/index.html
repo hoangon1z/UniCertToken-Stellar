@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniCertToken — Hệ Thống Chứng Chỉ Đại Học Số</title>
+    <meta name="description" content="Xác thực bằng cấp đại học tức thì, không thể làm giả trên Blockchain Stellar Testnet.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stellar-sdk/12.3.0/stellar-sdk.min.js"></script>
+    <!-- Freighter API v6.0.1 - local bundle (./freighter-bundle.js) -->
+    <script src="freighter-bundle.js"></script>
+    <style>
+        :root {
+            --primary:     #4f46e5;
+            --primary-dim: #3730a3;
+            --bg:          #08101e;
+            --surface:     #0e1a2e;
+            --card:        #131f35;
+            --border:      #1e3050;
+            --border-hi:   #2d4470;
+            --text:        #e2eaf8;
+            --text-dim:    #6b84ae;
+            --accent:      #0ea5e9;
+            --success:     #16a34a;
+            --success-bg:  #052e16;
+            --warning:     #b45309;
+            --warning-bg:  #1c1002;
+            --error:       #dc2626;
+            --error-bg:    #1f0606;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        .wrap { max-width: 1120px; margin: 0 auto; padding: 0 1.5rem; }
+
+        /* ── HEADER ── */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; z-index: 100;
+        }
+        .header-inner {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.9rem 1.5rem; max-width: 1120px; margin: 0 auto;
+        }
+        .logo { display: flex; align-items: center; gap: 0.75rem; }
+        .logo-mark {
+            width: 34px; height: 34px; border-radius: 8px;
+            background: var(--primary); display: flex; align-items: center; justify-content: center;
+        }
+        .logo-mark svg { width: 18px; height: 18px; fill: #fff; }
+        .logo-name { font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--text); }
+        .net-badge {
+            font-size: 0.65rem; font-weight: 600; padding: 0.18rem 0.55rem;
+            border-radius: 4px; background: rgba(14,165,233,0.12);
+            border: 1px solid rgba(14,165,233,0.3); color: var(--accent);
+            letter-spacing: 0.5px; text-transform: uppercase;
+        }
+
+        .wallet-area { display: flex; align-items: center; gap: 0.75rem; }
+        #btn-connect {
+            background: var(--primary); color: #fff; border: none;
+            padding: 0.55rem 1.1rem; border-radius: 8px;
+            font-weight: 600; font-size: 0.875rem; cursor: pointer;
+            transition: background 0.2s;
+            display: flex; align-items: center; gap: 0.45rem;
+        }
+        #btn-connect:hover { background: var(--primary-dim); }
+        #btn-connect svg { width: 15px; height: 15px; fill: none; stroke: white; stroke-width: 2; }
+        #wallet-pill {
+            display: none; align-items: center; gap: 0.5rem;
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 6px; padding: 0.4rem 0.85rem;
+            font-size: 0.78rem; color: var(--text-dim);
+        }
+        .dot-green { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+
+        /* ── PAGE TITLE ── */
+        .page-title { padding: 3rem 0 2rem; border-bottom: 1px solid var(--border); margin-bottom: 2.5rem; }
+        .page-title h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800; color: var(--text); margin-bottom: 0.5rem; }
+        .page-title p { color: var(--text-dim); max-width: 520px; font-size: 0.95rem; }
+
+        /* ── STATS ── */
+        .stats { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
+        .stat {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 10px; padding: 1rem 1.4rem; min-width: 130px;
+        }
+        .stat-num { font-size: 1.5rem; font-weight: 700; font-family: 'Outfit', sans-serif; color: var(--accent); }
+        .stat-lbl { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.15rem; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* ── GRID ── */
+        .grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 1.5rem; align-items: start; }
+        @media (max-width: 840px) { .grid { grid-template-columns: 1fr; } }
+
+        /* ── CARD ── */
+        .card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem;
+        }
+        .card-header {
+            display: flex; align-items: center; gap: 0.6rem;
+            font-size: 1rem; font-weight: 700; margin-bottom: 1.25rem;
+            padding-bottom: 0.85rem; border-bottom: 1px solid var(--border);
+        }
+        .card-icon {
+            width: 28px; height: 28px; border-radius: 6px;
+            background: var(--surface); border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .card-icon svg { width: 14px; height: 14px; }
+
+        .danger-card { border-color: rgba(220,38,38,0.3); }
+        .danger-card .card-icon { background: rgba(220,38,38,0.1); border-color: rgba(220,38,38,0.3); }
+        .danger-section {
+            font-size: 0.65rem; font-weight: 700; letter-spacing: 1.5px;
+            text-transform: uppercase; color: var(--error);
+            padding: 0.25rem 0.6rem; background: rgba(220,38,38,0.08);
+            border: 1px solid rgba(220,38,38,0.2); border-radius: 4px;
+            margin-bottom: 1rem; display: inline-block;
+        }
+
+        /* ── TABS ── */
+        .tabs { display: flex; gap: 0; margin-bottom: 1.25rem; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .tab-btn {
+            flex: 1; padding: 0.5rem 0.75rem; border: none;
+            background: var(--surface); color: var(--text-dim);
+            font-size: 0.8rem; font-weight: 600; cursor: pointer;
+            transition: 0.15s; font-family: 'Inter', sans-serif;
+            border-right: 1px solid var(--border);
+        }
+        .tab-btn:last-child { border-right: none; }
+        .tab-btn.active { background: var(--primary); color: #fff; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ── FORM ── */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.5rem; }
+        .form-full { grid-column: 1 / -1; }
+        @media (max-width: 500px) { .form-grid { grid-template-columns: 1fr; } }
+
+        .field { display: flex; flex-direction: column; gap: 0.3rem; }
+        label { font-size: 0.75rem; font-weight: 500; color: var(--text-dim); }
+        input {
+            background: var(--surface); border: 1px solid var(--border);
+            color: var(--text); padding: 0.65rem 0.85rem;
+            border-radius: 8px; font-size: 0.875rem; outline: none;
+            transition: border-color 0.15s; width: 100%;
+            font-family: 'Inter', sans-serif;
+        }
+        input:focus { border-color: var(--accent); }
+        input::placeholder { color: #2d4060; }
+
+        /* ── BUTTONS ── */
+        .btn {
+            width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: none;
+            font-size: 0.875rem; font-weight: 600; cursor: pointer;
+            transition: background 0.2s; display: flex; align-items: center;
+            justify-content: center; gap: 0.45rem;
+            font-family: 'Inter', sans-serif; margin-top: 0.75rem;
+        }
+        .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+        .btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; flex-shrink: 0; }
+
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-dim); }
+
+        .btn-accent { background: var(--accent); color: #fff; }
+        .btn-accent:hover:not(:disabled) { background: #0284c7; }
+
+        .btn-danger { background: var(--error); color: #fff; }
+        .btn-danger:hover:not(:disabled) { background: #b91c1c; }
+
+        /* ── SPINNER ── */
+        .spinner {
+            display: none; width: 15px; height: 15px; border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff;
+            animation: spin 0.7s linear infinite; flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── RESULT BOX ── */
+        .result-box {
+            display: none; margin-top: 1rem; padding: 1.1rem 1.2rem;
+            border-radius: 10px; border: 1px solid var(--success);
+            background: var(--success-bg);
+        }
+        .result-box.error   { border-color: var(--error);   background: var(--error-bg);   }
+        .result-box.warning { border-color: var(--warning);  background: var(--warning-bg); }
+
+        .result-head { font-weight: 700; font-size: 0.875rem; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.4rem; }
+        .col-ok   { color: #4ade80; }
+        .col-err  { color: #f87171; }
+        .col-warn { color: #fbbf24; }
+
+        .row { display: flex; justify-content: space-between; align-items: baseline; padding: 0.3rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.82rem; gap: 1rem; }
+        .row:last-child { border-bottom: none; padding-bottom: 0; }
+        .row-k { color: var(--text-dim); white-space: nowrap; }
+        .row-v { font-weight: 600; text-align: right; word-break: break-all; }
+
+        /* ── CONSOLE ── */
+        .console-wrap { background: #020b16; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+        .console-bar { background: var(--surface); padding: 0.5rem 0.85rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.5rem; }
+        .console-bar span { font-size: 0.7rem; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .console-dots { display: flex; gap: 5px; }
+        .console-dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--border); display: block; }
+        .console-body {
+            padding: 0.75rem 1rem; font-family: 'Courier New', monospace;
+            font-size: 0.72rem; color: #4ade80; max-height: 200px; overflow-y: auto;
+            line-height: 1.75;
+        }
+        .console-body a { color: var(--accent); }
+        .c-err  { color: #f87171; }
+        .c-warn { color: #fbbf24; }
+        .c-dim  { color: #4b6280; }
+
+        /* ── STATUS INFO ── */
+        .info-r { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
+        .info-r:last-child { border-bottom: none; }
+        .info-k { color: var(--text-dim); }
+        .chip { padding: 0.18rem 0.6rem; border-radius: 4px; font-size: 0.68rem; font-weight: 600; }
+        .chip-green { background: rgba(22,163,74,0.15);  color: #4ade80; border: 1px solid rgba(22,163,74,0.25); }
+        .chip-blue  { background: rgba(14,165,233,0.12); color: var(--accent); border: 1px solid rgba(14,165,233,0.25); }
+
+        hr.divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+        footer { border-top: 1px solid var(--border); padding: 2rem 1.5rem; text-align: center; font-size: 0.78rem; color: var(--text-dim); margin-top: 3rem; }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+    <div class="header-inner">
+        <div class="logo">
+            <div class="logo-mark">
+                <!-- Shield icon -->
+                <svg viewBox="0 0 24 24" fill="white"><path d="M12 2L4 6v6c0 5.5 3.8 10.7 8 12 4.2-1.3 8-6.5 8-12V6l-8-4z"/></svg>
+            </div>
+            <span class="logo-name">UniCertToken</span>
+            <span class="net-badge">Testnet</span>
+        </div>
+        <div class="wallet-area">
+            <button id="btn-connect">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
+                </svg>
+                Kết nối Ví
+            </button>
+            <div id="wallet-pill">
+                <span class="dot-green"></span>
+                <span id="wallet-addr-text">—</span>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="wrap">
+
+    <!-- PAGE TITLE -->
+    <div class="page-title">
+        <h1>Hệ Thống Chứng Chỉ Đại Học</h1>
+        <p>Phát hành, xác minh và thu hồi bằng cấp kỹ thuật số on-chain. Minh bạch tức thì, không thể giả mạo.</p>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-num" id="stat-total">—</div>
+            <div class="stat-lbl">Chứng chỉ đã phát</div>
+        </div>
+        <div class="stat">
+            <div class="stat-num">~5s</div>
+            <div class="stat-lbl">Thời gian xác nhận</div>
+        </div>
+        <div class="stat">
+            <div class="stat-num">$0.000003</div>
+            <div class="stat-lbl">Phí giao dịch</div>
+        </div>
+        <div class="stat">
+            <div class="stat-num" id="stat-uni" style="font-size:1rem;">—</div>
+            <div class="stat-lbl">Trường đại học</div>
+        </div>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="grid">
+
+        <!-- LEFT -->
+        <div>
+
+            <!-- VERIFY -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <!-- Search icon -->
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                    </div>
+                    Xác Minh Chứng Chỉ
+                </div>
+
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="tab-by-id">Theo ID</button>
+                    <button class="tab-btn" data-tab="tab-by-addr">Theo Địa chỉ Ví</button>
+                </div>
+
+                <div id="tab-by-id" class="tab-panel active">
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>ID Chứng chỉ</label>
+                            <input type="number" id="verify-id" placeholder="1" min="1">
+                        </div>
+                        <div class="field" style="justify-content:flex-end;">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-accent" id="btn-verify-id" style="margin-top:0;">
+                                <span class="spinner" id="sp-verify-id"></span>
+                                <svg viewBox="0 0 24 24" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                Kiểm tra
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-by-addr" class="tab-panel">
+                    <div class="field" style="margin-bottom:0.75rem;">
+                        <label>Dia chi Vi Sinh vien (dia chi day du G...)</label>
+                        <input type="text" id="verify-addr" placeholder="G...">
+                    </div>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn btn-accent" id="btn-verify-addr" style="margin-top:0; flex:1;">
+                            <span class="spinner" id="sp-verify-addr"></span>
+                            <svg viewBox="0 0 24 24" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            Tra cuu
+                        </button>
+                        <button class="btn" id="btn-use-my-wallet" style="margin-top:0; background:var(--surface); border:1px solid var(--border); color:var(--text-dim); width:auto; padding:0 0.85rem; font-size:0.78rem;" title="Dien dia chi vi dang ket noi">
+                            Dung vi cua toi
+                        </button>
+                    </div>
+                </div>
+
+                <div class="result-box" id="verify-result">
+                    <div class="result-head">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" id="verify-icon" style="color:#4ade80"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span id="verify-head" class="col-ok">CHỨNG CHỈ HỢP LỆ</span>
+                    </div>
+                    <div class="row"><span class="row-k">Sinh viên</span><span class="row-v" id="res-name">—</span></div>
+                    <div class="row"><span class="row-k">Bằng cấp</span><span class="row-v" id="res-degree">—</span></div>
+                    <div class="row"><span class="row-k">Ngành</span><span class="row-v" id="res-major">—</span></div>
+                    <div class="row"><span class="row-k">Năm tốt nghiệp</span><span class="row-v" id="res-year">—</span></div>
+                    <div class="row"><span class="row-k">GPA</span><span class="row-v" id="res-gpa">—</span></div>
+                    <div class="row"><span class="row-k">ID</span><span class="row-v" id="res-id">—</span></div>
+                </div>
+            </div>
+
+            <!-- ISSUE -->
+            <div class="card danger-card">
+                <div class="danger-section">Admin — Trường học</div>
+                <div class="card-header">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                        </svg>
+                    </div>
+                    Phát Hành Chứng Chỉ Mới
+                </div>
+                <div class="form-grid">
+                    <div class="field form-full">
+                        <label>Địa chỉ Ví Sinh viên</label>
+                        <input type="text" id="issue-addr" placeholder="G...">
+                    </div>
+                    <div class="field">
+                        <label>Họ và Tên</label>
+                        <input type="text" id="issue-name" placeholder="Nguyen Van A">
+                    </div>
+                    <div class="field">
+                        <label>Loại Bằng</label>
+                        <input type="text" id="issue-degree" placeholder="Cu nhan CNTT">
+                    </div>
+                    <div class="field">
+                        <label>Chuyên ngành</label>
+                        <input type="text" id="issue-major" placeholder="Khoa hoc May tinh">
+                    </div>
+                    <div class="field">
+                        <label>Năm Tốt nghiệp</label>
+                        <input type="number" id="issue-year" value="2026">
+                    </div>
+                    <div class="field form-full">
+                        <label>GPA (0 – 400, ví dụ: 380 = 3.80)</label>
+                        <input type="number" id="issue-gpa" placeholder="350" min="0" max="400">
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="btn-issue">
+                    <span class="spinner" id="sp-issue"></span>
+                    <svg viewBox="0 0 24 24" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    Ky va Phat hanh Chung chi
+                </button>
+            </div>
+
+            <!-- REVOKE -->
+            <div class="card danger-card">
+                <div class="danger-section">Admin — Thu Hoi</div>
+                <div class="card-header">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                        </svg>
+                    </div>
+                    Thu Hoi Chung Chi
+                </div>
+                <div class="form-grid">
+                    <div class="field">
+                        <label>ID Chứng chỉ cần thu hồi</label>
+                        <input type="number" id="revoke-id" placeholder="1" min="1">
+                    </div>
+                    <div class="field" style="justify-content:flex-end;">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-danger" id="btn-revoke" style="margin-top:0;">
+                            <span class="spinner" id="sp-revoke"></span>
+                            <svg viewBox="0 0 24 24" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                            Xac nhan
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT: Sidebar -->
+        <div>
+
+            <!-- System Status -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#6b84ae" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                        </svg>
+                    </div>
+                    Trang thai He thong
+                </div>
+                <div class="info-r">
+                    <span class="info-k">Mang</span>
+                    <span class="chip chip-green">Testnet</span>
+                </div>
+                <div class="info-r">
+                    <span class="info-k">Trang thai</span>
+                    <span class="chip chip-blue" id="sys-status">Dang tai...</span>
+                </div>
+                <div class="info-r">
+                    <span class="info-k">Contract ID</span>
+                    <span style="font-size:0.68rem; color: var(--text-dim);" id="cid-display">—</span>
+                </div>
+                <div style="margin-top:0.85rem; font-size:0.8rem;">
+                    <a id="explorer-link" href="#" target="_blank">Xem tren Stellar Expert &rarr;</a>
+                </div>
+            </div>
+
+            <!-- Console -->
+            <div class="card" style="padding:0; overflow:hidden;">
+                <div class="console-wrap" style="border:none; border-radius:0;">
+                    <div class="console-bar">
+                        <div class="console-dots"><i></i><i></i><i></i></div>
+                        <span>Developer Console</span>
+                    </div>
+                    <div class="console-body" id="console-logs">> San sang...</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p>Built on <a href="https://stellar.org" target="_blank">Stellar</a> &middot; Soroban SDK v22 &middot;
+    <a id="exp-footer" href="#" target="_blank">Xem Contract &rarr;</a></p>
+    <p style="margin-top:0.4rem;">Contract: <span id="cid-footer" style="color:var(--text-dim);">—</span></p>
+</footer>
+
+<script>
+/* ═══════════════════════════
+   CONFIG
+═══════════════════════════ */
+const CONTRACT_ID        = "CAGPJRUOY73BORPTPGUV6AQJQCMMTSQ3BCWW37OPLPEKCNSZNI7I7TMI";
+const CONTRACT_ADMIN     = "GBJA3IUDEVVOG3EBMDVRFB5OZ3DUCL73HD3JDOD6EKZVCGJIFJ52M7ZN";
+const RPC_URL            = "https://soroban-testnet.stellar.org";
+const NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
+const SIM_ACCOUNT        = "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN";
+
+const server = new StellarSdk.SorobanRpc.Server(RPC_URL);
+
+/* ═══════════════════════════
+   DOM INIT
+═══════════════════════════ */
+const consoleLogs   = document.getElementById('console-logs');
+const btnConnect    = document.getElementById('btn-connect');
+const walletPill    = document.getElementById('wallet-pill');
+const walletAddrTxt = document.getElementById('wallet-addr-text');
+
+const expUrl = `https://stellar.expert/explorer/testnet/contract/${CONTRACT_ID}`;
+document.getElementById('cid-display').textContent  = CONTRACT_ID.slice(0,10) + '...' + CONTRACT_ID.slice(-6);
+document.getElementById('cid-footer').textContent   = CONTRACT_ID;
+document.getElementById('explorer-link').href        = expUrl;
+document.getElementById('exp-footer').href           = expUrl;
+
+/* ═══════════════════════════
+   LOGGER
+═══════════════════════════ */
+function log(msg, type = 'info') {
+    const t = new Date().toLocaleTimeString();
+    if (type === 'tx') {
+        consoleLogs.innerHTML +=
+            `<br>[${t}] <a href="https://stellar.expert/explorer/testnet/tx/${msg}" target="_blank">Giao dich thanh cong - Xem TX</a>`;
+    } else {
+        const cls = type === 'error' ? 'c-err' : type === 'warn' ? 'c-warn' : type === 'dim' ? 'c-dim' : '';
+        consoleLogs.innerHTML += `<br><span class="${cls}">[${t}] > ${msg}</span>`;
+    }
+    consoleLogs.scrollTop = consoleLogs.scrollHeight;
+}
+
+/* ═══════════════════════════
+   LOADING STATE
+═══════════════════════════ */
+function setLoading(btnId, spId, on) {
+    document.getElementById(btnId).disabled       = on;
+    document.getElementById(spId).style.display   = on ? 'block' : 'none';
+}
+
+/* ═══════════════════════════
+   TABS
+═══════════════════════════ */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+        document.getElementById('verify-result').style.display = 'none';
+    });
+});
+
+/* ═══════════════════════════
+   WALLET
+═══════════════════════════ */
+// FreighterApi v6.x duoc load tu freighter-bundle.js (IIFE global)
+// Exports: FreighterApi.getAddress, FreighterApi.signTransaction, FreighterApi.isConnected, FreighterApi.requestAccess
+function getFreighter() {
+    return (typeof FreighterApi !== 'undefined') ? FreighterApi : null;
+}
+
+async function getConnectedAddress() {
+    const f = getFreighter();
+    if (!f) {
+        alert('Loi: freighter-bundle.js chua load. Lam moi trang (F5).');
+        return null;
+    }
+    try {
+        // v1.7.1: isConnected() tra ve boolean truc tiep
+        const connected = await f.isConnected();
+        if (!connected) {
+            alert('Freighter extension chua duoc cai hoac chua mo khoa.\nVui long:\n1. Cai Freighter tu freighter.app\n2. Mo khoa vi\n3. Lam moi trang (F5)');
+            return null;
+        }
+        // isAllowed() kiem tra site co quyen truy cap chua; neu chua se hien popup
+        const allowed = await f.isAllowed();
+        if (!allowed) {
+            await f.setAllowed();  // hien popup xin quyen
+        }
+        // v1.7.1: getPublicKey() tra ve address string truc tiep
+        const address = await f.getPublicKey();
+        return address;
+    } catch (e) {
+        const msg = String(e.message ?? e);
+        if (msg.includes('User declined') || msg.includes('rejected') || msg.includes('denied')) {
+            log('Nguoi dung da tu choi ket noi vi.', 'warn');
+        } else {
+            alert('Loi Freighter: ' + msg);
+        }
+        return null;
+    }
+}
+
+
+
+btnConnect.addEventListener('click', async () => {
+    log("Dang ket noi vi...", 'dim');
+    const addr = await getConnectedAddress();
+    if (addr) {
+        window._connectedAddr = addr;  // luu dia chi day du
+        walletAddrTxt.textContent   = addr.slice(0,8) + '...' + addr.slice(-4);
+        walletPill.style.display    = 'flex';
+        btnConnect.style.display    = 'none';
+        log("Da ket noi: " + addr);
+        loadStats();
+    }
+});
+
+document.getElementById('btn-use-my-wallet').addEventListener('click', () => {
+    if (window._connectedAddr) {
+        document.getElementById('verify-addr').value = window._connectedAddr;
+        log("Da dien dia chi vi: " + window._connectedAddr, 'dim');
+    } else {
+        log("Chua ket noi vi. Bam 'Ket noi Vi' truoc.", 'warn');
+    }
+});
+
+/* ═══════════════════════════
+   SIMULATE (read-only)
+═══════════════════════════ */
+async function simulateCall(fnName, ...scArgs) {
+    const op = new StellarSdk.Contract(CONTRACT_ID).call(fnName, ...scArgs);
+    const tx = new StellarSdk.TransactionBuilder(
+        new StellarSdk.Account(SIM_ACCOUNT, "0"),
+        { fee: "100", networkPassphrase: NETWORK_PASSPHRASE }
+    ).addOperation(op).setTimeout(0).build();
+
+    const sim = await server.simulateTransaction(tx);
+    if (StellarSdk.SorobanRpc.Api.isSimulationError(sim)) {
+        throw new Error("Simulate error: " + sim.error);
+    }
+    return sim;
+}
+
+/* ═══════════════════════════
+   HELPERS: G-address → ScVal (tranh Address.fromString bug SDK v12)
+═══════════════════════════ */
+function gAddressToScVal(gAddress) {
+    // Dung Keypair de lay raw public key bytes (32 bytes)
+    const kp  = StellarSdk.Keypair.fromPublicKey(gAddress);
+    const raw = kp.rawPublicKey();
+    return StellarSdk.xdr.ScVal.scvAddress(
+        StellarSdk.xdr.ScAddress.scAddressTypeAccount(
+            StellarSdk.xdr.AccountID.publicKeyTypeEd25519(raw)
+        )
+    );
+}
+
+/* ═══════════════════════════
+   PARSE CERT SCVAL
+═══════════════════════════ */
+function parseCertScVal(retval) {
+    const result = {};
+    try {
+        const entries = retval.map();
+        for (const entry of entries) {
+            const k = entry.key().sym().toString();
+            const v = entry.val();
+            const t = v.switch().name;
+            if (t === 'scvString') {
+                result[k] = v.str().toString();
+            } else if (t === 'scvU32') {
+                result[k] = v.u32();
+            } else if (t === 'scvU64') {
+                // u64 co the la BigInt hoac object
+                try { result[k] = Number(v.u64().toString()); } catch { result[k] = v.u64(); }
+            } else if (t === 'scvAddress') {
+                // Xu ly ca account (G...) va contract (C...) address
+                const scAddr = v.address();
+                const addrType = scAddr.switch().name;
+                if (addrType === 'scAddressTypeAccount') {
+                    result[k] = StellarSdk.StrKey.encodeEd25519PublicKey(
+                        scAddr.accountId().ed25519()
+                    );
+                } else if (addrType === 'scAddressTypeContract') {
+                    result[k] = StellarSdk.StrKey.encodeContract(scAddr.contractId());
+                } else {
+                    result[k] = '[address]';
+                }
+            } else {
+                result[k] = String(v.value !== undefined ? v.value() : v);
+            }
+        }
+    } catch (e) {
+        console.error('parseCertScVal error:', e);
+    }
+    return result;
+}
+function showCertResult(native) {
+    const box  = document.getElementById('verify-result');
+    const head = document.getElementById('verify-head');
+    const icon = document.getElementById('verify-icon');
+    box.className  = 'result-box';
+    head.className = 'col-ok';
+    head.textContent = 'CHUNG CHI HOP LE';
+    icon.style.color = '#4ade80';
+    icon.innerHTML   = '<polyline points="20 6 9 17 4 12"/>';
+
+    document.getElementById('res-name').textContent   = native.student_name    ?? '—';
+    document.getElementById('res-degree').textContent = native.degree          ?? '—';
+    document.getElementById('res-major').textContent  = native.major           ?? '—';
+    document.getElementById('res-year').textContent   = native.graduation_year ?? '—';
+    document.getElementById('res-gpa').textContent    = native.gpa !== undefined
+        ? (Number(native.gpa) / 100).toFixed(2) : '—';
+    document.getElementById('res-id').textContent     = native.id              ?? '—';
+    box.style.display = 'block';
+}
+
+function showCertError(msg) {
+    const box  = document.getElementById('verify-result');
+    const head = document.getElementById('verify-head');
+    const icon = document.getElementById('verify-icon');
+    box.className  = 'result-box error';
+    head.className = 'col-err';
+    head.textContent = 'KHONG TIM THAY / DA BI THU HOI';
+    icon.style.color = '#f87171';
+    icon.innerHTML   = '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
+    ['res-name','res-degree','res-major','res-year','res-gpa','res-id'].forEach(id => {
+        document.getElementById(id).textContent = '—';
+    });
+    box.style.display = 'block';
+    log("Loi: " + msg, 'error');
+}
+
+/* ═══════════════════════════
+   VERIFY BY ID
+═══════════════════════════ */
+document.getElementById('btn-verify-id').addEventListener('click', async () => {
+    const idVal = document.getElementById('verify-id').value.trim();
+    if (!idVal || parseInt(idVal) < 1) return;
+    setLoading('btn-verify-id', 'sp-verify-id', true);
+    document.getElementById('verify-result').style.display = 'none';
+    try {
+        log("Dang xac minh ID: " + idVal + "...", 'dim');
+        const sim = await simulateCall(
+            "verify_certificate",
+            StellarSdk.xdr.ScVal.scvU64(StellarSdk.xdr.Uint64.fromString(idVal))
+        );
+        if (!sim.result) throw new Error("Khong co ket qua.");
+        showCertResult(parseCertScVal(sim.result.retval));
+        log("Xac minh hoan tat.");
+    } catch (e) { showCertError(e.message); }
+    finally { setLoading('btn-verify-id', 'sp-verify-id', false); }
+});
+
+/* ═══════════════════════════
+   VERIFY BY ADDRESS
+═══════════════════════════ */
+document.getElementById('btn-verify-addr').addEventListener('click', async () => {
+    const addr = document.getElementById('verify-addr').value.trim();
+    if (!addr) return;
+    setLoading('btn-verify-addr', 'sp-verify-addr', true);
+    document.getElementById('verify-result').style.display = 'none';
+    try {
+        log("Dang tra cuu vi: " + addr.slice(0,8) + "...", 'dim');
+        const sim = await simulateCall(
+            "get_cert_by_student",
+            gAddressToScVal(addr)
+        );
+        if (!sim.result) throw new Error("Khong co ket qua.");
+        showCertResult(parseCertScVal(sim.result.retval));
+        log("Tim thay chung chi.");
+    } catch (e) { showCertError(e.message); }
+    finally { setLoading('btn-verify-addr', 'sp-verify-addr', false); }
+});
+
+/* ═══════════════════════════
+   POLL TX
+═══════════════════════════ */
+async function pollTx(hash, max = 12, ms = 3000) {
+    log("Dang cho mang xac nhan...", 'dim');
+    for (let i = 0; i < max; i++) {
+        await new Promise(r => setTimeout(r, ms));
+        try {
+            const res = await server.getTransaction(hash);
+            if (res.status === "SUCCESS") { log(hash, 'tx'); return true; }
+            if (res.status === "FAILED")  { log("Giao dich THAT BAI.", 'error'); return false; }
+            log("Cho... lan " + (i+1), 'dim');
+        } catch (_) {}
+    }
+    log("Timeout — kiem tra Stellar Expert thu cong.", 'warn');
+    return false;
+}
+
+/* ═══════════════════════════
+   SEND SIGNED TX
+═══════════════════════════ */
+async function sendContractTx(fnName, scArgs = []) {
+    const userAddr = await getConnectedAddress();
+    if (!userAddr) throw new Error("Chua ket noi vi.");
+
+    // Canh bao neu dung sai vi admin (phat hanh/thu hoi can vi admin)
+    if ((fnName === 'issue_certificate' || fnName === 'revoke_certificate')) {
+        log("Luu y: Chi admin " + CONTRACT_ADMIN.slice(0,8) + "... moi goi duoc " + fnName, 'dim');
+    }
+
+    // Kiem tra account ton tai; neu chua co thi nap Friendbot
+    let account;
+    try {
+        account = await server.getAccount(userAddr);
+    } catch (e) {
+        // SDK v12 co the throw object hoac string
+        const isNotFound = e?.status === 404
+            || e?.response?.status === 404
+            || String(e?.message ?? e).toLowerCase().includes('not found')
+            || String(e?.message ?? e).includes('404');
+
+        if (isNotFound) {
+            log("Tai khoan " + userAddr.slice(0,8) + "... chua duoc nap tien Testnet.", 'warn');
+            log("Dang goi Friendbot nap XLM test...", 'dim');
+            try {
+                const fundRes = await fetch(`https://friendbot.stellar.org/?addr=${encodeURIComponent(userAddr)}`);
+                const fundJson = await fundRes.json();
+                if (fundJson.error_code) throw new Error(fundJson.error_message ?? fundJson.error_code);
+                log("Friendbot nap tien thanh cong! Vui long thu lai.", 'dim');
+            } catch (fe) {
+                throw new Error(
+                    "Tai khoan chua ton tai va Friendbot that bai (" + (fe.message ?? fe) + ").\n" +
+                    "Chay lenh sau trong terminal:\n" +
+                    "curl \"https://friendbot.stellar.org/?addr=" + userAddr + "\""
+                );
+            }
+            account = await server.getAccount(userAddr);
+        } else {
+            throw e;
+        }
+    }
+    const op       = new StellarSdk.Contract(CONTRACT_ID).call(fnName, ...scArgs);
+    const tx = new StellarSdk.TransactionBuilder(account, {
+        fee: StellarSdk.BASE_FEE,
+        networkPassphrase: NETWORK_PASSPHRASE,
+    }).addOperation(op).setTimeout(30).build();
+
+    log("Dang chuan bi giao dich...", 'dim');
+    const prepared = await server.prepareTransaction(tx);
+
+    log("Vui long KY GIAO DICH tren vi Freighter...", 'warn');
+    const f = getFreighter();
+    // v1.7.1: signTransaction tra ve string XDR truc tiep
+    const signedTxXdr = await f.signTransaction(prepared.toXDR(), {
+        networkPassphrase: NETWORK_PASSPHRASE,
+    });
+
+    log("Dang gui len mang Stellar...", 'dim');
+    const signed = StellarSdk.TransactionBuilder.fromXDR(signedTxXdr, NETWORK_PASSPHRASE);
+    const result = await server.sendTransaction(signed);
+    if (result.status === "PENDING") await pollTx(result.hash);
+    else if (result.status === "ERROR") throw new Error("TX Error: " + result.errorResult);
+    return result;
+}
+
+/* ═══════════════════════════
+   ISSUE
+═══════════════════════════ */
+document.getElementById('btn-issue').addEventListener('click', async () => {
+    const student = document.getElementById('issue-addr').value.trim();
+    const name    = document.getElementById('issue-name').value.trim();
+    const degree  = document.getElementById('issue-degree').value.trim();
+    const major   = document.getElementById('issue-major').value.trim();
+    const year    = parseInt(document.getElementById('issue-year').value);
+    const gpa     = parseInt(document.getElementById('issue-gpa').value);
+
+    if (!student || !name || !degree || !major || !year || isNaN(gpa))
+        return alert("Vui long dien day du tat ca cac truong.");
+    if (gpa < 0 || gpa > 400)
+        return alert("GPA phai trong khoang 0-400.");
+
+    setLoading('btn-issue', 'sp-issue', true);
+    try {
+        log("Phat hanh chung chi cho " + name + "...");
+        await sendContractTx("issue_certificate", [
+            gAddressToScVal(student),
+            StellarSdk.xdr.ScVal.scvString(name),
+            StellarSdk.xdr.ScVal.scvString(degree),
+            StellarSdk.xdr.ScVal.scvString(major),
+            StellarSdk.xdr.ScVal.scvU32(year),
+            StellarSdk.xdr.ScVal.scvU32(gpa),
+        ]);
+        log("Chung chi da duoc phat hanh thanh cong.");
+        setTimeout(loadStats, 4500);
+        ['issue-addr','issue-name','issue-degree','issue-major','issue-gpa'].forEach(id =>
+            document.getElementById(id).value = '');
+    } catch (e) { log("Loi: " + e.message, 'error'); }
+    finally { setLoading('btn-issue', 'sp-issue', false); }
+});
+
+/* ═══════════════════════════
+   REVOKE
+═══════════════════════════ */
+document.getElementById('btn-revoke').addEventListener('click', async () => {
+    const certId = document.getElementById('revoke-id').value.trim();
+    if (!certId || parseInt(certId) < 1) return;
+    if (!confirm("Ban co chac muon THU HOI chung chi ID #" + certId + "? Hanh dong nay khong the hoan tac.")) return;
+
+    setLoading('btn-revoke', 'sp-revoke', true);
+    try {
+        log("Dang thu hoi chung chi #" + certId + "...", 'warn');
+        await sendContractTx("revoke_certificate", [
+            StellarSdk.xdr.ScVal.scvU64(StellarSdk.xdr.Uint64.fromString(certId)),
+        ]);
+        log("Chung chi #" + certId + " da bi thu hoi thanh cong.");
+        document.getElementById('revoke-id').value = '';
+    } catch (e) { log("Loi thu hoi: " + e.message, 'error'); }
+    finally { setLoading('btn-revoke', 'sp-revoke', false); }
+});
+
+/* ═══════════════════════════
+   LOAD STATS
+═══════════════════════════ */
+async function loadStats() {
+    try {
+        const s1 = await simulateCall("total_certificates");
+        if (s1.result) document.getElementById('stat-total').textContent = StellarSdk.scValToNative(s1.result.retval);
+        const s2 = await simulateCall("university_name");
+        if (s2.result) {
+            const u = StellarSdk.scValToNative(s2.result.retval);
+            document.getElementById('stat-uni').textContent = u.length > 16 ? u.slice(0,16) + '...' : u;
+        }
+        document.getElementById('sys-status').textContent = 'Hoat dong';
+        document.getElementById('sys-status').className   = 'chip chip-green';
+    } catch (_) {
+        document.getElementById('sys-status').textContent = 'Loi ket noi';
+    }
+}
+
+loadStats();
+</script>
+</body>
+</html>
