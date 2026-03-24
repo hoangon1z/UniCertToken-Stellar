@@ -77,4 +77,4 @@ stellar contract invoke \
 - **Mạng**: Stellar Testnet
 
 ## Nhóm
-- **Tran Hoang** | PTIT | Rise In x Stellar University Tour 2026
+- TRAN HOANG, VO NGUYEN HOANG, LUC PHI KHANH, TU KHANH LE| PTIT | Rise In x Stellar University Tour 2026
