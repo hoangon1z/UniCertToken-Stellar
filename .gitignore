@@ -1,0 +1,11 @@
+# Rust build artifacts (very large, no need to commit)
+target/
+
+# Node modules
+node_modules/
+
+# OS files
+.DS_Store
+
+# Stellar CLI cache
+.stellar/
